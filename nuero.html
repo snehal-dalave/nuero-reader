@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroScan v2.5 | Advanced Brain Reader Interface</title>
+    <style>
+        :root {
+            --bg-color: #05070a;
+            --panel-bg: #0f1218;
+            --primary: #00f3ff;
+            --primary-dim: rgba(0, 243, 255, 0.1);
+            --accent: #7000ff;
+            --success: #00ff9d;
+            --warning: #ffb800;
+            --danger: #ff003c;
+            --text-main: #e0e6ed;
+            --text-muted: #94a3b8;
+            --font-tech: 'Courier New', Courier, monospace;
+            --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-ui);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            height: 60px;
+            background: rgba(15, 18, 24, 0.9);
+            border-bottom: var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+
+        .brand-icon {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--primary);
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .brand-icon::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .system-status {
+            font-family: var(--font-tech);
+            font-size: 0.8rem;
+            display: flex;
+            gap: 20px;
+        }
+
+        .status-item { display: flex; align-items: center; gap: 8px; }
+
+        .led { width: 8px; height: 8px; border-radius: 50%; background-color: #333; }
+        .led.active { background-color: var(--success); box-shadow: 0 0 8px var(--success); animation: pulse 2s infinite; }
+
+        /* --- Navigation Tabs --- */
+        .nav-tabs {
+            background: #000;
+            display: flex;
+            border-bottom: var(--border);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 15px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-family: var(--font-tech);
+            font-weight: bold;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tab-btn:hover { background: rgba(255,255,255,0.05); }
+        
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            background: linear-gradient(to bottom, rgba(0,243,255,0.05), transparent);
+        }
+
+        /* --- Main Content Area --- */
+        main {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .view-page {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: none; /* Hidden by default */
+            grid-template-columns: 250px 1fr 300px;
+            gap: 1px;
+            background-color: var(--border);
+        }
+
+        .view-page.active { display: grid; }
+
+        /* --- Panels --- */
+        .panel {
+            background-color: var(--bg-color);
+            padding: 20px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .panel-title {
+            font-family: var(--font-tech);
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            letter-spacing: 1.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* --- Sidebar Controls (Shared) --- */
+        .controls-panel { background-color: var(--panel-bg); }
+        
+        .control-group { margin-bottom: 25px; }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            font-family: var(--font-tech);
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover { background: var(--primary); color: #000; box-shadow: 0 0 15px var(--primary-dim); }
+        
+        .btn.danger { border-color: var(--danger); color: var(--danger); background: rgba(255, 0, 60, 0.1); }
+        .btn.danger:hover { background: var(--danger); color: #fff; }
+
+        /* --- View 1: Signal Monitor (Brain Map & Waves) --- */
+        .viz-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background: radial-gradient(circle at center, #13161c 0%, #05070a 100%);
+        }
+
+        .brain-map-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            min-height: 300px;
+        }
+
+        .brain-region {
+            fill: #1a1d26;
+            stroke: var(--text-muted);
+            stroke-width: 1;
+            transition: fill 0.3s ease;
+            cursor: crosshair;
+        }
+
+        .brain-region.active { fill: var(--primary); stroke: #fff; filter: drop-shadow(0 0 8px var(--primary)); }
+        .brain-region.active-high { fill: var(--danger); stroke: #fff; filter: drop-shadow(0 0 12px var(--danger)); }
+
+        .brain-label { fill: var(--text-muted); font-size: 10px; font-family: var(--font-tech); pointer-events: none; text-anchor: middle; }
+
+        .oscilloscope-grid {
+            display: grid;
+            grid-template-rows: repeat(4, 1fr);
+            gap: 10px;
+            height: 200px;
+        }
+
+        .wave-container { background: #000; border: var(--border); position: relative; overflow: hidden; }
+        .wave-label { position: absolute; top: 5px; left: 5px; font-size: 0.6rem; font-family: var(--font-tech); color: var(--text-muted); z-index: 2; background: rgba(0,0,0,0.5); padding: 2px 5px; }
+
+        /* --- View 2: Cognitive Analysis (NEW) --- */
+        .analysis-panel {
+            background: radial-gradient(circle at center, #1a1025 0%, #05070a 100%);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr;
+            gap: 20px;
+        }
+
+        /* Brain State Badge */
+        .state-container {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            border: 1px dashed var(--accent);
+            background: rgba(112, 0, 255, 0.05);
+            position: relative;
+        }
+
+        .state-label {
+            font-family: var(--font-tech);
+            color: var(--accent);
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .state-badge {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #fff;
+            text-shadow: 0 0 20px var(--accent);
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        /* Emotion Radar */
+        .radar-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Thought Decoder */
+        .thought-decoder {
+            background: rgba(0,0,0,0.5);
+            border: var(--border);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .decoder-output {
+            font-family: var(--font-ui);
+            font-size: 1.1rem;
+            color: var(--text-main);
+            line-height: 1.5;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+        }
+
+        .decoder-confidence {
+            margin-top: auto;
+            font-family: var(--font-tech);
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-align: right;
+        }
+
+        .confidence-bar {
+            height: 2px;
+            background: #333;
+            margin-top: 5px;
+        }
+        .confidence-fill {
+            height: 100%;
+            background: var(--warning);
+            width: 0%;
+            transition: width 0.5s;
+        }
+
+        /* --- Right Panel (Logs) --- */
+        .data-panel { background-color: var(--panel-bg); display: flex; flex-direction: column; gap: 20px; }
+        
+        .metric-card {
+            background: rgba(0,0,0,0.3);
+            border: var(--border);
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .metric-value {
+            font-size: 1.8rem;
+            font-family: var(--font-tech);
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .metric-bar { height: 4px; background: #333; margin-top: 10px; position: relative; overflow: hidden; }
+        .metric-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.5s ease; }
+
+        .log-container {
+            flex: 1;
+            background: #000;
+            border: var(--border);
+            font-family: var(--font-tech);
+            font-size: 0.75rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .log-header { background: #1a1d26; padding: 8px 12px; border-bottom: var(--border); color: var(--text-muted); font-size: 0.7rem; text-transform: uppercase; }
+        .log-content { flex: 1; overflow-y: hidden; padding: 10px; display: flex; flex-direction: column; justify-content: flex-end; }
+
+        .log-entry { margin-bottom: 6px; line-height: 1.4; border-left: 2px solid transparent; padding-left: 8px; animation: fadeIn 0.3s ease-out; }
+        .log-entry.info { border-color: var(--primary); color: #aaddff; }
+        .log-entry.warn { border-color: var(--warning); color: #ffddaa; }
+        .log-entry.crit { border-color: var(--danger); color: #ffaaaa; }
+        .log-time { opacity: 0.6; margin-right: 8px; }
+
+        /* --- Animations --- */
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0, 255, 157, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(0, 255, 157, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 255, 157, 0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes scan { 0% { top: 0%; opacity: 0; } 50% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+
+        /* Footer */
+        footer {
+            height: 30px;
+            background: var(--panel-bg);
+            border-top: var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            gap: 20px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .view-page { grid-template-columns: 200px 1fr; }
+            .data-panel { grid-column: 1 / -1; flex-direction: row; height: auto; }
+            .log-container { height: 200px; }
+            .analysis-panel { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .view-page { grid-template-columns: 1fr; overflow-y: auto; }
+            body { overflow: auto; height: auto; }
+            .brain-map-container { height: 250px; }
+            .oscilloscope-grid { height: 300px; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand">
+        <div class="brand-icon"></div>
+        NEUROSCAN v2.5
+    </div>
+    <div class="system-status">
+        <div class="status-item">
+            <div class="led" id="ble-status"></div>
+            <span>BT LINK</span>
+        </div>
+        <div class="status-item">
+            <div class="led" id="sensor-status"></div>
+            <span>SENSORS</span>
+        </div>
+        <div class="status-item">
+            <span id="clock">00:00:00</span>
+        </div>
+    </div>
+</header>
+
+<!-- Navigation Tabs -->
+<nav class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('signal')">Signal Monitor</button>
+    <button class="tab-btn" onclick="switchTab('analysis')">Cognitive Analysis</button>
+</nav>
+
+<main>
+    <!-- VIEW 1: SIGNAL MONITOR -->
+    <section id="view-signal" class="view-page active">
+        <!-- Sidebar Controls -->
+        <aside class="panel controls-panel">
+            <div class="panel-title">Connection Control</div>
+            <button class="btn" id="btn-connect" onclick="toggleConnection()">Initialize Link</button>
+            <button class="btn danger" id="btn-emergency" onclick="emergencyStop()" disabled>Emergency Flush</button>
+
+            <div class="panel-title" style="margin-top: 30px;">Signal Parameters</div>
+            <div class="control-group">
+                <div class="slider-container">
+                    <div class="slider-label"><span>Sensitivity Gain</span><span id="val-sensitivity">1.0x</span></div>
+                    <input type="range" min="0.1" max="5.0" step="0.1" value="1.0" id="slider-sensitivity">
+                </div>
+                <div class="slider-container">
+                    <div class="slider-label"><span>Noise Filter (Hz)</span><span id="val-filter">50Hz</span></div>
+                    <input type="range" min="10" max="120" step="10" value="50" id="slider-filter">
+                </div>
+            </div>
+
+            <div style="margin-top: auto; font-size: 0.7rem; color: var(--text-muted); border-top: 1px solid #333; padding-top: 10px;">
+                DEVICE ID: NS-8492-X<br>
+                FIRMWARE: 4.1.2-RC<br>
+                LATENCY: <span id="latency-val">12</span>ms
+            </div>
+        </aside>
+
+        <!-- Center Visualization -->
+        <section class="panel viz-panel">
+            <div class="brain-map-container" id="brain-view">
+                <svg id="brain-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="translate(100, 100) scale(0.9)">
+                        <path id="reg-frontal-l" class="brain-region" d="M -40 -40 Q -80 -40 -90 -10 Q -95 20 -70 50 L -40 30 Z" />
+                        <text x="-65" y="-10" class="brain-label">FL</text>
+                        <path id="reg-parietal-l" class="brain-region" d="M -40 -40 Q -10 -80 20 -70 L 10 -40 Z" />
+                        <text x="-10" y="-60" class="brain-label">PL</text>
+                        <path id="reg-occipital-l" class="brain-region" d="M 20 -70 Q 50 -60 60 -30 L 40 -10 Z" />
+                        <text x="40" y="-50" class="brain-label">OL</text>
+                        <path id="reg-temporal-l" class="brain-region" d="M -90 -10 Q -95 20 -70 50 Q -40 60 -10 40 L -20 10 Z" />
+                        <text x="-60" y="40" class="brain-label">TL</text>
+                        <path id="reg-frontal-r" class="brain-region" d="M 40 -40 Q 80 -40 90 -10 Q 95 20 70 50 L 40 30 Z" />
+                        <text x="65" y="-10" class="brain-label">FR</text>
+                        <path id="reg-parietal-r" class="brain-region" d="M 40 -40 Q 10 -80 -20 -70 L -10 -40 Z" />
+                        <text x="10" y="-60" class="brain-label">PR</text>
+                        <path id="reg-occipital-r" class="brain-region" d="M -20 -70 Q -50 -60 -60 -30 L -40 -10 Z" />
+                        <text x="-40" y="-50" class="brain-label">OR</text>
+                        <path id="reg-temporal-r" class="brain-region" d="M 90 -10 Q 95 20 70 50 Q 40 60 10 40 L 20 10 Z" />
+                        <text x="60" y="40" class="brain-label">TR</text>
+                        <path id="reg-cerebellum" class="brain-region" d="M -30 60 Q 0 80 30 60 Q 40 40 0 30 Q -40 40 -30 60 Z" />
+                        <text x="0" y="55" class="brain-label">CB</text>
+                    </g>
+                </svg>
+                <div style="position: absolute; bottom: 10px; color: var(--primary); font-family: var(--font-tech); font-size: 0.7rem;">
+                    LIVE CORTICAL ACTIVITY
+                </div>
+            </div>
+
+            <div class="oscilloscope-grid">
+                <div class="wave-container">
+                    <div class="wave-label">DELTA (0.5-4Hz)</div>
+                    <canvas id="wave-delta"></canvas>
+                </div>
+                <div class="wave-container">
+                    <div class="wave-label">THETA (4-8Hz)</div>
+                    <canvas id="wave-theta"></canvas>
+                </div>
+                <div class="wave-container">
+                    <div class="wave-label">ALPHA (8-12Hz)</div>
+                    <canvas id="wave-alpha"></canvas>
+                </div>
+                <div class="wave-container">
+                    <div class="wave-label">BETA (12-30Hz)</div>
+                    <canvas id="wave-beta"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Data Panel -->
+        <aside class="panel data-panel">
+            <div class="metric-card">
+                <div class="metric-header"><span>FOCUS LEVEL</span><span id="focus-val" style="color: var(--primary)">0%</span></div>
+                <div class="metric-value" id="focus-display">00</div>
+                <div class="metric-bar"><div class="metric-fill" id="focus-bar"></div></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header"><span>COGNITIVE LOAD</span><span id="load-val" style="color: var(--accent)">Low</span></div>
+                <div class="metric-value" id="load-display">0.2</div>
+                <div class="metric-bar"><div class="metric-fill" id="load-bar" style="background: var(--accent)"></div></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header"><span>STRESS INDEX</span><span id="stress-val" style="color: var(--success)">Normal</span></div>
+                <div class="metric-value" id="stress-display">12</div>
+                <div class="metric-bar"><div class="metric-fill" id="stress-bar" style="background: var(--success)"></div></div>
+            </div>
+            <div class="log-container">
+                <div class="log-header">System Log</div>
+                <div class="log-content" id="sys-log">
+                    <div class="log-entry info"><span class="log-time">--:--:--</span>System initialized. Waiting for link...</div>
+                </div>
+            </div>
+        </aside>
+    </section>
+
+    <!-- VIEW 2: COGNITIVE ANALYSIS (NEW) -->
+    <section id="view-analysis" class="view-page">
+        <!-- Sidebar (Controls Copy for UX) -->
+        <aside class="panel controls-panel">
+            <div class="panel-title">Analysis Settings</div>
+            <div class="control-group">
+                <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">
+                    Deep learning models active. Decoding semantic intent from Broca's and Wernicke's areas.
+                </p>
+                <div class="slider-container">
+                    <div class="slider-label"><span>Decoding Depth</span><span id="val-depth">Standard</span></div>
+                    <input type="range" min="1" max="3" step="1" value="2" id="slider-depth">
+                </div>
+            </div>
+            <div style="margin-top:20px; padding:10px; border:1px solid #333; background:rgba(0,0,0,0.5)">
+                <div style="font-size:0.7rem; color:var(--text-muted)">MODEL VER.</div>
+                <div style="font-family:var(--font-tech); color:var(--accent)">GPT-NEURO-4</div>
+            </div>
+        </aside>
+
+        <!-- Center Analysis -->
+        <section class="panel analysis-panel">
+            
+            <!-- Brain State Badge -->
+            <div class="state-container">
+                <div class="state-label">DETECTED COGNITIVE STATE</div>
+                <div class="state-badge" id="current-state">STANDBY</div>
+            </div>
+
+            <!-- Thought Decoding -->
+            <div class="thought-decoder">
+                <div class="panel-title">Neural Thought Decoding</div>
+                <div class="decoder-output" id="decoder-text">
+                    Awaiting neural stream...
+                </div>
+                <div class="decoder-confidence">
+                    SEMANTIC CONFIDENCE: <span id="confidence-text">0%</span>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" id="confidence-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Emotion Radar Chart -->
+            <div class="radar-container">
+                <div class="panel-title" style="position:absolute; top:10px; left:10px;">Emotional Topography</div>
+                <canvas id="emotion-radar" width="300" height="300"></canvas>
+            </div>
+
+        </section>
+
+        <!-- Right Side (History) -->
+        <aside class="panel data-panel">
+             <div class="panel-title">Decoding History</div>
+             <div class="log-container" style="border:none; background:transparent;">
+                 <div class="log-content" id="thought-history">
+                     <!-- History logs go here -->
+                 </div>
+             </div>
+        </aside>
+    </section>
+</main>
+
+<footer>
+    <span>POWER: AC/BIOMEDIC</span>
+    <span>BUFFER: 4096KB</span>
+    <span>STATUS: <span id="footer-status">STANDBY</span></span>
+</footer>
+
+<script>
+    // --- Configuration & State ---
+    const state = {
+        connected: false,
+        activeTab: 'signal',
+        sensitivity: 1.0,
+        filter: 50,
+        startTime: Date.now(),
+        metrics: {
+            focus: 0,
+            load: 0.1,
+            stress: 10
+        },
+        emotions: [0, 0, 0, 0, 0] // Happy, Sad, Angry, Fear, Neutral
+    };
+
+    const regions = [
+        'reg-frontal-l', 'reg-frontal-r', 'reg-parietal-l', 'reg-parietal-r', 
+        'reg-occipital-l', 'reg-occipital-r', 'reg-temporal-l', 'reg-temporal-r', 'reg-cerebellum'
+    ];
+
+    // Data Dictionaries for Simulation
+    const brainStates = [
+        { name: "DEEP WORK", trigger: (f, s) => f > 80 && s < 30 },
+        { name: "HIGH ANXIETY", trigger: (f, s) => s > 70 },
+        { name: "FLOW STATE", trigger: (f, s) => f > 90 && s < 20 },
+        { name: "DAYDREAMING", trigger: (f, s) => f < 40 && s < 20 },
+        { name: "RESTING IDLE", trigger: (f, s) => f < 20 && s < 20 },
+        { name: "COGNITIVE OVERLOAD", trigger: (f, s) => f > 60 && s > 60 },
+        { name: "ALERT PROCESSING", trigger: (f, s) => f > 50 && f < 80 && s < 50 }
+    ];
+
+    const thoughts = [
+        "I need to finish this project by Friday.",
+        "Did I lock the front door?",
+        "This color is pleasing to my eyes.",
+        "I'm hungry, I should eat something.",
+        "Why is that noise so loud?",
+        "I wonder what they are thinking.",
+        "My back hurts a little bit.",
+        "This is fascinating data.",
+        "I feel relaxed right now.",
+        "Concentrating... focusing..."
+    ];
+
+    // --- UI References ---
+    const ui = {
+        btnConnect: document.getElementById('btn-connect'),
+        btnEmergency: document.getElementById('btn-emergency'),
+        log: document.getElementById('sys-log'),
+        thoughtHistory: document.getElementById('thought-history'),
+        focusDisplay: document.getElementById('focus-display'),
+        focusBar: document.getElementById('focus-bar'),
+        loadDisplay: document.getElementById('load-display'),
+        loadBar: document.getElementById('load-bar'),
+        stressDisplay: document.getElementById('stress-display'),
+        stressBar: document.getElementById('stress-bar'),
+        clock: document.getElementById('clock'),
+        footerStatus: document.getElementById('footer-status'),
+        bleStatus: document.getElementById('ble-status'),
+        sensorStatus: document.getElementById('sensor-status'),
+        latency: document.getElementById('latency-val'),
+        
+        // Analysis UI
+        currentStateBadge: document.getElementById('current-state'),
+        decoderText: document.getElementById('decoder-text'),
+        confidenceText: document.getElementById('confidence-text'),
+        confidenceFill: document.getElementById('confidence-fill')
+    };
+
+    // --- Navigation Logic ---
+    function switchTab(tabName) {
+        state.activeTab = tabName;
+        
+        // Update Buttons
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+
+        // Update Views
+        document.querySelectorAll('.view-page').forEach(page => page.classList.remove('active'));
+        document.getElementById(`view-${tabName}`).classList.add('active');
+    }
+
+    // --- Waveform Engine ---
+    class WaveOscilloscope {
+        constructor(canvasId, color, speed, amplitude) {
+            this.canvas = document.getElementById(canvasId);
+            this.ctx = this.canvas.getContext('2d');
+            this.color = color;
+            this.speed = speed;
+            this.amplitude = amplitude;
+            this.offset = 0;
+            this.resize();
+            window.addEventListener('resize', () => this.resize());
+        }
+
+        resize() {
+            this.canvas.width = this.canvas.parentElement.offsetWidth;
+            this.canvas.height = this.canvas.parentElement.offsetHeight;
+        }
+
+        draw() {
+            const { width, height } = this.canvas;
+            const ctx = this.ctx;
+            
+            ctx.clearRect(0, 0, width, height);
+            ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, height/2);
+            ctx.lineTo(width, height/2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 2;
+
+            for (let x = 0; x < width; x++) {
+                const y = height/2 + 
+                    Math.sin((x + this.offset) * 0.05 * this.speed) * (this.amplitude * height/4) * state.sensitivity +
+                    Math.sin((x + this.offset * 2) * 0.02) * (this.amplitude * height/10);
+                
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            if(state.connected) this.offset += this.speed;
+        }
+    }
+
+    const waves = [
+        new WaveOscilloscope('wave-delta', '#94a3b8', 0.2, 0.8),
+        new WaveOscilloscope('wave-theta', '#00ff9d', 0.5, 0.6),
+        new WaveOscilloscope('wave-alpha', '#00f3ff', 0.8, 0.5),
+        new WaveOscilloscope('wave-beta', '#7000ff', 1.5, 0.3)
+    ];
+
+    // --- Radar Chart Logic (New) ---
+    function drawRadarChart() {
+        const canvas = document.getElementById('emotion-radar');
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width;
+        const h = canvas.height;
+        const centerX = w / 2;
+        const centerY = h / 2;
+        const radius = Math.min(w, h) / 2 - 30;
+        const labels = ["HAPPY", "SAD", "ANGRY", "FEAR", "NEUTRAL"];
+        const numAxes = 5;
+        const angleSlice = (Math.PI * 2) / numAxes;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Draw Background Web
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        for (let r = 0.2; r <= 1; r += 0.2) {
+            ctx.beginPath();
+            for (let i = 0; i < numAxes; i++) {
+                const angle = i * angleSlice - Math.PI / 2;
+                const x = centerX + Math.cos(angle) * (radius * r);
+                const y = centerY + Math.sin(angle) * (radius * r);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        // Draw Axes & Labels
+        ctx.font = "12px Courier New";
+        ctx.fillStyle = "#00f3ff";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        
+        for (let i = 0; i < numAxes; i++) {
+            const angle = i * angleSlice - Math.PI / 2;
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+            
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+
+            // Labels
+            const labelX = centerX + Math.cos(angle) * (radius + 20);
+            const labelY = centerY + Math.sin(angle) * (radius + 20);
+            ctx.fillText(labels[i], labelX, labelY);
+        }
+
+        // Draw Data Polygon
+        if (state.connected) {
+            ctx.beginPath();
+            ctx.fillStyle = "rgba(112, 0, 255, 0.4)";
+            ctx.strokeStyle = "#7000ff";
+            ctx.lineWidth = 2;
+
+            for (let i = 0; i < numAxes; i++) {
+                const val = state.emotions[i]; // 0.0 to 1.0
+                const angle = i * angleSlice - Math.PI / 2;
+                const r = val * radius;
+                const x = centerX + Math.cos(angle) * r;
+                const y = centerY + Math.sin(angle) * r;
+
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+    }
+
+    // --- Logic & Simulation ---
+    
+    function toggleConnection() {
+        if (!state.connected) {
+            ui.btnConnect.innerHTML = "Connecting...";
+            ui.btnConnect.disabled = true;
+            addLog("Initiating handshake protocol...", "info");
+            
+            setTimeout(() => {
+                addLog("Encrypting neural stream...", "info");
+            }, 800);
+
+            setTimeout(() => {
+                state.connected = true;
+                ui.btnConnect.innerHTML = "Disconnect";
+                ui.btnConnect.disabled = false;
+                ui.btnConnect.classList.add('danger');
+                ui.btnEmergency.disabled = false;
+                
+                ui.bleStatus.classList.add('active');
+                ui.sensorStatus.classList.add('active');
+                ui.footerStatus.innerText = "LIVE FEED";
+                ui.footerStatus.style.color = "var(--success)";
+                
+                addLog("Connection established. Streaming active.", "info");
+                addLog("Calibrating sensors...", "warn");
+                
+                startSimulationLoop();
+            }, 2000);
+        } else {
+            state.connected = false;
+            ui.btnConnect.innerHTML = "Initialize Link";
+            ui.btnConnect.classList.remove('danger');
+            ui.btnEmergency.disabled = false;
+            
+            ui.bleStatus.classList.remove('active');
+            ui.sensorStatus.classList.remove('active');
+            ui.footerStatus.innerText = "STANDBY";
+            ui.footerStatus.style.color = "var(--text-muted)";
+
+            resetMetrics();
+            addLog("Connection terminated.", "crit");
+        }
+    }
+
+    function resetMetrics() {
+        ui.focusDisplay.innerText = "00";
+        ui.focusBar.style.width = "0%";
+        ui.loadDisplay.innerText = "0.0";
+        ui.loadBar.style.width = "0%";
+        ui.stressDisplay.innerText = "0";
+        ui.stressBar.style.width = "0%";
+        ui.currentStateBadge.innerText = "STANDBY";
+        ui.currentStateBadge.style.color = "#555";
+        ui.currentStateBadge.style.textShadow = "none";
+        ui.decoderText.innerText = "Awaiting neural stream...";
+        
+        // Reset radar
+        state.emotions = [0,0,0,0,0];
+        drawRadarChart();
+        
+        regions.forEach(id => {
+            document.getElementById(id).classList.remove('active', 'active-high');
+        });
+    }
+
+    function addLog(msg, type = "info", target = 'sys-log') {
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${type}`;
+        
+        const now = new Date();
+        const timeStr = now.toTimeString().split(' ')[0];
+        
+        entry.innerHTML = `<span class="log-time">${timeStr}</span>${msg}`;
+        
+        if(target === 'sys-log') ui.log.appendChild(entry);
+        else ui.thoughtHistory.appendChild(entry);
+        
+        // Scroll to bottom
+        const container = target === 'sys-log' ? ui.log : ui.thoughtHistory;
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function startSimulationLoop() {
+        // Randomize Latency
+        setInterval(() => {
+            if(state.connected) ui.latency.innerText = Math.floor(Math.random() * 15) + 8;
+        }, 1000);
+
+        // Core Simulation Loop (Runs every 800ms)
+        setInterval(() => {
+            if (!state.connected) return;
+
+            // 1. Basic Metrics
+            const focus = Math.floor(Math.random() * 40) + 50;
+            const load = (Math.random() * 0.8 + 0.1).toFixed(2);
+            const stress = Math.floor(Math.random() * 30) + 5;
+            state.metrics.focus = focus;
+            state.metrics.load = load;
+            state.metrics.stress = stress;
+
+            ui.focusDisplay.innerText = focus;
+            ui.focusBar.style.width = `${focus}%`;
+            ui.loadDisplay.innerText = load;
+            ui.loadBar.style.width = `${load * 100}%`;
+            ui.stressDisplay.innerText = stress;
+            ui.stressBar.style.width = `${stress}%`;
+
+            // 2. Brain Map Highlighting (Visual 1)
+            regions.forEach(id => {
+                const el = document.getElementById(id);
+                const rand = Math.random();
+                el.classList.remove('active', 'active-high');
+                if (rand > 0.9) el.classList.add('active-high');
+                else if (rand > 0.7) el.classList.add('active');
+            });
+
+            // 3. Analysis Logic (New Page)
+            updateAnalysisData();
+
+            // 4. Random Logs
+            if (Math.random() > 0.85) {
+                const msgs = ["Buffer flush", "Packet loss 0.01%", "Signal stabilized", "Heart rate sync"];
+                addLog(msgs[Math.floor(Math.random() * msgs.length)], "info");
+            }
+
+        }, 800);
+
+        // Thought decoding loop (Slower, 3 seconds)
+        setInterval(() => {
+            if (!state.connected) return;
+            generateThought();
+        }, 3000);
+    }
+
+    function updateAnalysisData() {
+        // Determine State
+        const currentState = brainStates.find(s => s.trigger(state.metrics.focus, state.metrics.stress)) || brainStates[6]; // default to alert
+        
+        if (ui.currentStateBadge.innerText !== currentState.name) {
+            ui.currentStateBadge.innerText = currentState.name;
+            // Color logic based on state
+            if(currentState.name.includes("ANXIETY") || currentState.name.includes("OVERLOAD")) {
+                ui.currentStateBadge.style.color = "var(--danger)";
+                ui.currentStateBadge.style.textShadow = "0 0 20px var(--danger)";
+            } else if (currentState.name.includes("WORK") || currentState.name.includes("FLOW")) {
+                ui.currentStateBadge.style.color = "var(--primary)";
+                ui.currentStateBadge.style.textShadow = "0 0 20px var(--primary)";
+            } else {
+                ui.currentStateBadge.style.color = "var(--success)";
+                ui.currentStateBadge.style.textShadow = "0 0 20px var(--success)";
+            }
+        }
+
+        // Generate Emotions (Random but weighted by stress/focus roughly)
+        const fear = (state.metrics.stress / 100) + (Math.random() * 0.2);
+        const angry = (state.metrics.stress > 50 ? Math.random() * 0.6 : 0);
+        const happy = (state.metrics.stress < 30 ? Math.random() * 0.8 : 0.1);
+        const sad = Math.random() * 0.3;
+        const neutral = 1.0 - (happy + fear + angry + sad) * 0.5; // Normalize roughly
+
+        state.emotions = [happy, sad, angry, fear, neutral];
+        drawRadarChart();
+    }
+
+    function generateThought() {
+        const thought = thoughts[Math.floor(Math.random() * thoughts.length)];
+        const confidence = Math.floor(Math.random() * 30) + 70; // 70-100%
+
+        ui.decoderText.innerText = `"${thought}"`;
+        ui.confidenceText.innerText = `${confidence}%`;
+        ui.confidenceFill.style.width = `${confidence}%`;
+        
+        // Color code confidence
+        if(confidence > 90) ui.confidenceFill.style.background = "var(--success)";
+        else if (confidence > 75) ui.confidenceFill.style.background = "var(--warning)";
+        else ui.confidenceFill.style.background = "var(--danger)";
+
+        addLog(`Decoded: ${thought}`, "info", "thought-history");
+    }
+
+    // --- Animation Loop ---
+    function animate() {
+        waves.forEach(wave => wave.draw());
+        
+        // Redraw radar if connected to animate smoothly (optional, currently updated on data tick)
+        if(state.connected && state.activeTab === 'analysis') {
+           // drawRadarChart(); // Uncomment for smooth interpolation if implemented
+        }
+
+        const now = new Date();
+        ui.clock.innerText = now.toTimeString().split(' ')[0];
+
+        requestAnimationFrame(animate);
+    }
+
+    // Start
+    animate();
+
+</script>
+
+</body>
+</html>
